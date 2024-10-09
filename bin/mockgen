@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# Check if mockgen is installed
+mockgen_path=$(go env GOPATH)/bin/mockgen
+mockgen_version=$($mockgen_path -version 2>/dev/null)
+
+if [[ -z ${mockgen_version} ]]; then
+    echo "Installing mockgen..."
+    go install go.uber.org/mock/mockgen@latest
+fi
+
+# Get changed files
+files=$(git diff --name-only | sort | uniq)
+
+# Create mocks directory if it does not exist
+mkdir -p mocks
+
+for file in $files; do
+    echo -e "Checking ${file} for interfaces..."
+    # Exclude mocks, test files, and only consider .go files
+    if [[ ${file} != mocks/* && ${file} != *"_test"* && ${file} == *.go ]]; then
+        dest="mocks/$(echo ${file} | sed 's/^/mock_/; s/\//\/mock_/g')"
+
+        # Check if mock should be removed if source doesn't exist
+        if [[ ! -f ${file} && -f ${dest} ]]; then
+            echo "Removing unused mock ${dest}..."
+            rm ${dest}
+            git add ${dest}
+            continue
+        fi
+
+        echo -e "Checking ${file} for interfaces..."
+        echo -e "Destination: ${dest}"
+
+        # Check if the file contains an interface to mock
+        if [[ -f ${file} && $(grep -i ".* interface {" ${file} | wc -l) -ne 0 ]]; then
+            echo -e "Generating mock for ${file}"
+            $mockgen_path -source=${file} -destination=${dest}
+            git add ${dest}
+            echo -e "${dest} is generated"
+        fi
+    fi
+done

@@ -1,0 +1,20 @@
+services:
+  db:
+    container_name: db
+    build:
+      context: .
+      dockerfile: Dockerfile-db
+    restart: always
+    network_mode: bridge
+    volumes:
+      - ./db:/docker-entrypoint-initdb.d/
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: geodb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+volumes:
+  pg_data:

@@ -1,0 +1,2 @@
+CREATE EXTENSION postgis;
+CREATE DATABASE geodb;
